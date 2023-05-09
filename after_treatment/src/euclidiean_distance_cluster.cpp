@@ -95,7 +95,7 @@ void LidarProcess::ranSac(pcl::PointCloud<pcl::PointXYZ>::Ptr& voxel_cloud, pcl:
     sac_segmentation.setModelType(pcl::SACMODEL_PLANE);
     sac_segmentation.setMethodType(pcl::SAC_RANSAC);
     sac_segmentation.setMaxIterations(1000);
-    sac_segmentation.setDistanceThreshold(0.2);
+    sac_segmentation.setDistanceThreshold(0.3);
     sac_segmentation.setInputCloud(voxel_cloud);
     sac_segmentation.segment(*plane_inliers, *plane_coefficients);
 
