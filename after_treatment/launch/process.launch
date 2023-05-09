@@ -1,0 +1,3 @@
+<launch>
+  <node name="lidar_process" pkg="after_treatment" type="euclidiean_distance_cluster" output="screen"/>
+</launch>
