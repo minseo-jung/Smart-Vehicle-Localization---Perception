@@ -53,7 +53,7 @@ void LidarProcess::setRoi(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud){
     pcl::PassThrough<pcl::PointXYZ> pass;
     pass.setInputCloud(cloud);
     pass.setFilterFieldName("x");
-    pass.setFilterLimits(-5.0, 10.0);
+    pass.setFilterLimits(-5.0, 20.0);
     pass.filter(*cloud);
 
     pass.setInputCloud(cloud);
