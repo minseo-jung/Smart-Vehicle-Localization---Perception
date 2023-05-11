@@ -10,9 +10,9 @@ ExtendedKalmanFilter::ExtendedKalmanFilter(){
     ekf_path_pub = nh.advertise<nav_msgs::Path>("ekf_path", 1);
     m_visual_pub = nh.advertise<geometry_msgs::PoseStamped>("heading",1);
 
-    m_pose_pub = nh.advertise<autoku_msgs::Gnss>( "kalman_pose", 100);
+    m_pose_pub = nh.advertise<autoku_msgs::Gnss>("kalman_pose", 100);
 
-    gps_input = false, state_init_check = false;
+    state_init_check = false;
 }
 
 ExtendedKalmanFilter::~ExtendedKalmanFilter(){}
@@ -37,10 +37,9 @@ void ExtendedKalmanFilter::init(){
 }
 
 void ExtendedKalmanFilter::state_init(){
-    if(vehicle_utm.velocity>0 && gps_input && !state_init_check){
+    if(!state_init_check){
         state_init_check = true;
         measure_check = false;
-        prev_yaw = atan2((gps_utm.y-gps_utm.prev_y),(gps_utm.x-gps_utm.prev_x));
 
         x_post(0) = gps_utm.x;
         x_post(1) = gps_utm.y;
@@ -65,20 +64,11 @@ void ExtendedKalmanFilter::gpsCallback(const sensor_msgs::NavSatFix::ConstPtr& m
 
     current_pos.lat = msg -> latitude;
     current_pos.lon = msg -> longitude;
-    if(!gps_input){
-        gps_utm.prev_x = projection.forward(current_pos).x();
-        gps_utm.prev_y = projection.forward(current_pos).y();
-        gps_input = true;
-    }
-    else{
-        gps_utm.prev_x = gps_utm.x;
-        gps_utm.prev_y = gps_utm.y;
-    }
 
     gps_utm.x = projection.forward(current_pos).x();
     gps_utm.y = projection.forward(current_pos).y();
 
-    vehicle_utm.velocity = getVehicleSpeed(gps_utm);
+    // vehicle_utm.velocity = getVehicleSpeed(gps_utm);
 }
 
 void ExtendedKalmanFilter::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
