@@ -111,7 +111,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS include
+#  INCLUDE_DIRS include
 #  LIBRARIES gps_imu_ekf
   CATKIN_DEPENDS tf geometry_msgs lanelet2_core lanelet2_io lanelet2_projection roscpp sensor_msgs std_msgs visualization_msgs nav_msgs
 #  DEPENDS system_lib

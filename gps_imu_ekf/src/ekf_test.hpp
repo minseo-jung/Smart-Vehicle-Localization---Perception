@@ -86,10 +86,8 @@ class ExtendedKalmanFilter{
         utm gps_utm;
         utm dr_utm;
         utm vehicle_utm;
-        geometry_msgs::PoseStamped vehicle_pose;
 
         autoku_msgs::Gnss k_pose;
-
 
         lanelet::GPSPoint current_pos;
 };
