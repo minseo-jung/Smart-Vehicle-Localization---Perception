@@ -1,1 +1,0 @@
-autoku_msgs/SpatialTrajectoryPoint[] point

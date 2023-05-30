@@ -1,1 +1,0 @@
-autoku_msgs/TemporalTrajectoryPoint[] point
