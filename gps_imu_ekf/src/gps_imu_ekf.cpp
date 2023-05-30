@@ -73,7 +73,7 @@ void ExtendedKalmanFilter::gpsCallback(const sensor_msgs::NavSatFix::ConstPtr& m
     vehicle_prior.position.x = gps_utm.x;
     vehicle_prior.position.y = gps_utm.y;
 
-    vehicle_utm.velocity = getVehicleSpeed(gps_utm);
+    //vehicle_utm.velocity = getVehicleSpeed(gps_utm);
 }
 
 void ExtendedKalmanFilter::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){

@@ -1,5 +1,5 @@
 <launch>
-  <include file="$(find gps_imu_ekf)/launch/ekf.launch">
+  <include file="$(find ekf_test)/launch/ekf.launch">
   </include>
   
   <node name="kalman_rviz" pkg="rviz" type="rviz" args="-d $(find kalman_rviz)/rviz/kalman.rviz"/>
