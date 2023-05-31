@@ -26,12 +26,11 @@ void ExtendedKalmanFilter::init(){
 
     vehicle_utm.x = 0;
     vehicle_utm.y = 0;
-    vehicle_utm.velocity = 0;
+    vehicle_utm.velocity = 0.5;
 
     prev_yaw = 0;
 
-    gps_dt = 1;
-    imu_dt = 0.02;
+    dt = 1.0 / 80;
 
     prediction_count = 0;
 }
@@ -51,17 +50,13 @@ void ExtendedKalmanFilter::state_init(){
     }
 }
 
-double ExtendedKalmanFilter::getVehicleSpeed(utm utm){
-    return std::sqrt(std::pow(utm.x - utm.prev_x,2)+std::pow(utm.y - utm.prev_y,2))/gps_dt;
-}
+// double ExtendedKalmanFilter::getVehicleSpeed(utm utm){
+//     return std::sqrt(std::pow(utm.x - utm.prev_x,2)+std::pow(utm.y - utm.prev_y,2))/gps_dt;
+// }
 
 void ExtendedKalmanFilter::gpsCallback(const sensor_msgs::NavSatFix::ConstPtr& msg)
 {
     measure_check = true;
-
-    gps_current_time = msg->header.stamp;
-    gps_dt = (gps_current_time - gps_prev_time).toSec();
-    gps_prev_time = gps_current_time;
 
     current_pos.lat = msg -> latitude;
     current_pos.lon = msg -> longitude;
@@ -79,17 +74,12 @@ void ExtendedKalmanFilter::gpsCallback(const sensor_msgs::NavSatFix::ConstPtr& m
     gps_utm.y = projection.forward(current_pos).y();
 
     if(!state_init_check){
-        vehicle_utm.velocity =  getVehicleSpeed(gps_utm);
-        k_pose.altitude = msg->altitude;
+        k_pose.latitude = msg->latitude;
         k_pose.longitude = msg->longitude;
     }
 }
 
 void ExtendedKalmanFilter::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
-    imu_current_time = msg->header.stamp;
-    imu_dt = (imu_current_time - imu_prev_time).toSec();
-    imu_prev_time = imu_current_time;
-    
     yaw_rate = msg -> angular_velocity.z;
 }
 
@@ -99,9 +89,9 @@ void ExtendedKalmanFilter::speedCallback(const std_msgs::Float32::ConstPtr& msg)
 
 VectorXd ExtendedKalmanFilter::f_k(VectorXd x_post){
     VectorXd fk(N); 
-    fk << (x_post(0) + vehicle_utm.velocity * imu_dt * cos(x_post(2))),
-        (x_post(1) + vehicle_utm.velocity * imu_dt * sin(x_post(2))),
-        (x_post(2) + yaw_rate * imu_dt);
+    fk << (x_post(0) + vehicle_utm.velocity * dt * cos(x_post(2))),
+        (x_post(1) + vehicle_utm.velocity * dt * sin(x_post(2))),
+        (x_post(2) + yaw_rate * dt);
     return fk;
 }
 
@@ -122,8 +112,8 @@ void ExtendedKalmanFilter::EKF(){
         z << gps_utm.x,
             gps_utm.y;
 
-        F_jacob << 1.0, 0.0, -1*vehicle_utm.velocity*imu_dt*sin(vehicle_utm.yaw), 
-             0.0, 1.0, vehicle_utm.velocity*imu_dt*cos(vehicle_utm.yaw),
+        F_jacob << 1.0, 0.0, -1*vehicle_utm.velocity*dt*sin(vehicle_utm.yaw), 
+             0.0, 1.0, vehicle_utm.velocity*dt*cos(vehicle_utm.yaw),
              0.0, 0.0, 1.0;
 
         x_prior = f_k(x_post);
@@ -180,7 +170,7 @@ void ExtendedKalmanFilter::Visualization(geometry_msgs::PoseStamped gps_pose, ge
     gps_pose.pose.position.z = 0;
     gps_pose.pose.orientation.x = 0.0;
     gps_pose.pose.orientation.y = 0.0;
-    gps_pose.pose.orientation.z = vehicle_utm.yaw*180/M_PI;
+    gps_pose.pose.orientation.z = 0.0;
     gps_pose.pose.orientation.w = 1.0;
     gps_path.poses.push_back(gps_pose);
     gps_path.header.stamp = ros::Time::now();
@@ -194,7 +184,7 @@ void ExtendedKalmanFilter::Visualization(geometry_msgs::PoseStamped gps_pose, ge
     dr_pose.pose.position.z = 0;
     dr_pose.pose.orientation.x = 0.0;
     dr_pose.pose.orientation.y = 0.0;
-    dr_pose.pose.orientation.z = vehicle_utm.yaw*180/M_PI;
+    dr_pose.pose.orientation.z = 0.0;
     dr_pose.pose.orientation.w = 1.0;
     dr_path.poses.push_back(dr_pose);
     dr_path.header.stamp = ros::Time::now();
@@ -208,7 +198,7 @@ void ExtendedKalmanFilter::Visualization(geometry_msgs::PoseStamped gps_pose, ge
     ekf_pose.pose.position.z = 0;
     ekf_pose.pose.orientation.x = 0.0;
     ekf_pose.pose.orientation.y = 0.0;
-    ekf_pose.pose.orientation.z = vehicle_utm.yaw*180/M_PI;
+    ekf_pose.pose.orientation.z = 0.0;
     ekf_pose.pose.orientation.w = 1.0;
     ekf_path.poses.push_back(ekf_pose);
     ekf_path.header.stamp = ros::Time::now();
@@ -236,7 +226,7 @@ int main(int argc, char** argv)
 
     ExtendedKalmanFilter.init();
 
-    ros::Rate loop_rate(70);
+    ros::Rate loop_rate(80);
 
     while (ros::ok()){
 

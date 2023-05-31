@@ -71,7 +71,7 @@ class ExtendedKalmanFilter{
 
         bool gps_input, state_init_check, measure_check;
 
-        double yaw_rate, yaw, prev_yaw, gps_dt, imu_dt;
+        double yaw_rate, yaw, prev_yaw, dt;
 
         int prediction_count, gps_count, dr_count, ekf_count;
 
@@ -80,8 +80,6 @@ class ExtendedKalmanFilter{
         visualization_msgs::Marker marker;
 
         geometry_msgs::PoseStamped gps_pose, dr_pose, ekf_pose;
-
-        ros::Time gps_current_time, gps_prev_time, imu_current_time, imu_prev_time;
 
         utm gps_utm;
         utm dr_utm;
