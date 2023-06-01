@@ -6,9 +6,9 @@ ExtendedKalmanFilter::ExtendedKalmanFilter(){
     m_vehicle_speed_sub = nh.subscribe<std_msgs::Float32>("/echo_hello",1,&ExtendedKalmanFilter::speedCallback, this);
     
     gps_path_pub = nh.advertise<nav_msgs::Path>("gps_path", 1);
-    dr_path_pub = nh.advertise<nav_msgs::Path>("dr_path", 1);
     ekf_path_pub = nh.advertise<nav_msgs::Path>("ekf_path", 1);
     m_visual_pub = nh.advertise<geometry_msgs::PoseStamped>("heading",1);
+    box_pub = nh.advertise<jsk_recognition_msgs::BoundingBox>("car_model",1);
 
     m_pose_pub = nh.advertise<autoku_msgs::Gnss>("kalman_pose",100);
 
@@ -20,9 +20,6 @@ ExtendedKalmanFilter::~ExtendedKalmanFilter(){}
 void ExtendedKalmanFilter::init(){
     gps_utm.x = 0;
     gps_utm.y = 0;
-
-    dr_utm.x = 0;
-    dr_utm.y = 0;
 
     vehicle_utm.x = 0;
     vehicle_utm.y = 0;
@@ -161,7 +158,7 @@ void ExtendedKalmanFilter::publishPose(){
     m_pose_pub.publish(k_pose);
 }
 
-void ExtendedKalmanFilter::Visualization(geometry_msgs::PoseStamped gps_pose, geometry_msgs::PoseStamped dr_pose, geometry_msgs::PoseStamped ekf_pose){
+void ExtendedKalmanFilter::Visualization(geometry_msgs::PoseStamped gps_pose, geometry_msgs::PoseStamped ekf_pose){
 
     gps_pose.header.frame_id = "map";
     gps_pose.header.stamp = ros::Time::now();
@@ -176,20 +173,6 @@ void ExtendedKalmanFilter::Visualization(geometry_msgs::PoseStamped gps_pose, ge
     gps_path.header.stamp = ros::Time::now();
     gps_path.header.frame_id = "map";
     gps_path_pub.publish(gps_path);
-
-    dr_pose.header.frame_id = "map";
-    dr_pose.header.stamp = ros::Time::now();
-    dr_pose.pose.position.x = f_dr(0);
-    dr_pose.pose.position.y = f_dr(1);
-    dr_pose.pose.position.z = 0;
-    dr_pose.pose.orientation.x = 0.0;
-    dr_pose.pose.orientation.y = 0.0;
-    dr_pose.pose.orientation.z = 0.0;
-    dr_pose.pose.orientation.w = 1.0;
-    dr_path.poses.push_back(dr_pose);
-    dr_path.header.stamp = ros::Time::now();
-    dr_path.header.frame_id = "map";
-    dr_path_pub.publish(dr_path);
 
     ekf_pose.header.frame_id = "map";
     ekf_pose.header.stamp = ros::Time::now();
@@ -206,15 +189,25 @@ void ExtendedKalmanFilter::Visualization(geometry_msgs::PoseStamped gps_pose, ge
     ekf_path_pub.publish(ekf_path);
 }
 
-void ExtendedKalmanFilter::visualizeHeading(geometry_msgs::PoseStamped ekf_pose){
-    ekf_pose.header.frame_id = "map";
+void ExtendedKalmanFilter::visualizeHeading(geometry_msgs::PoseStamped ekf_pose, jsk_recognition_msgs::BoundingBox car_model){
+    ekf_pose.header.frame_id = "my_car";
     ekf_pose.header.stamp = ros::Time::now();
     ekf_pose.pose.position.x = vehicle_utm.x;
     ekf_pose.pose.position.y = vehicle_utm.y;
     ekf_pose.pose.position.z = 0;
-    ekf_pose.pose.orientation = tf::createQuaternionMsgFromYaw(vehicle_utm.yaw);  
+    ekf_pose.pose.orientation = tf::createQuaternionMsgFromYaw(vehicle_utm.yaw);
+
+    car_model.header.frame_id = "my_car";
+    car_model.header.stamp = ros::Time::now();
+    car_model.dimensions.x = 3.0;
+    car_model.dimensions.y = 1.5;
+    car_model.dimensions.z = 1.0;
+    car_model.pose.position.x = vehicle_utm.x;
+    car_model.pose.position.y = vehicle_utm.y;
+    car_model.pose.orientation = tf::createQuaternionMsgFromYaw(vehicle_utm.yaw);
 
     m_visual_pub.publish(ekf_pose);
+    box_pub.publish(car_model);
 }
 
 
@@ -232,8 +225,8 @@ int main(int argc, char** argv)
 
         ExtendedKalmanFilter.state_init();
         ExtendedKalmanFilter.EKF();
-        ExtendedKalmanFilter.Visualization(ExtendedKalmanFilter.gps_pose, ExtendedKalmanFilter.dr_pose, ExtendedKalmanFilter.ekf_pose);
-        ExtendedKalmanFilter.visualizeHeading(ExtendedKalmanFilter.ekf_pose);
+        ExtendedKalmanFilter.Visualization(ExtendedKalmanFilter.gps_pose, ExtendedKalmanFilter.ekf_pose);
+        ExtendedKalmanFilter.visualizeHeading(ExtendedKalmanFilter.ekf_pose, ExtendedKalmanFilter.car_model);
         ExtendedKalmanFilter.publishPose();
 
         ros::spinOnce();

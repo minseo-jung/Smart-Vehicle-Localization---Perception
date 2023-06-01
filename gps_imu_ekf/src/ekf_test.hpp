@@ -12,6 +12,7 @@
 #include <nav_msgs/Path.h>
 #include <cmath>
 #include <tf/tf.h>
+#include <jsk_recognition_msgs/BoundingBox.h>
 #include <std_msgs/Float32.h>
 #include "autoku_msgs/Gnss.h"
 
@@ -36,7 +37,7 @@ class ExtendedKalmanFilter{
         ros::Publisher m_pose_pub;
         ros::Publisher m_visual_pub;
         ros::Publisher gps_path_pub;
-        ros::Publisher dr_path_pub;
+        ros::Publisher box_pub;
         ros::Publisher ekf_path_pub;
 
         ros::Subscriber m_gps_sub;
@@ -61,9 +62,9 @@ class ExtendedKalmanFilter{
 
         VectorXd f_k(VectorXd x_post);
 
-        void Visualization(geometry_msgs::PoseStamped gps_pose, geometry_msgs::PoseStamped dr_pose, geometry_msgs::PoseStamped ekf_pose);
+        void Visualization(geometry_msgs::PoseStamped gps_pose, geometry_msgs::PoseStamped ekf_pose);
 
-        void visualizeHeading(geometry_msgs::PoseStamped ekf_pose);
+        void visualizeHeading(geometry_msgs::PoseStamped ekf_pose, jsk_recognition_msgs::BoundingBox car_model);
 
         void publishPose();
 
@@ -73,16 +74,17 @@ class ExtendedKalmanFilter{
 
         double yaw_rate, yaw, prev_yaw, dt;
 
-        int prediction_count, gps_count, dr_count, ekf_count;
+        int prediction_count, gps_count, ekf_count;
 
-        nav_msgs::Path gps_path, dr_path, ekf_path;
+        nav_msgs::Path gps_path, ekf_path;
 
         visualization_msgs::Marker marker;
 
-        geometry_msgs::PoseStamped gps_pose, dr_pose, ekf_pose;
+        jsk_recognition_msgs::BoundingBox car_model;
+
+        geometry_msgs::PoseStamped gps_pose, ekf_pose;
 
         utm gps_utm;
-        utm dr_utm;
         utm vehicle_utm;
 
         autoku_msgs::Gnss k_pose;
