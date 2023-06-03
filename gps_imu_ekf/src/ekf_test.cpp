@@ -190,14 +190,22 @@ void ExtendedKalmanFilter::Visualization(geometry_msgs::PoseStamped gps_pose, ge
 }
 
 void ExtendedKalmanFilter::visualizeHeading(geometry_msgs::PoseStamped ekf_pose, jsk_recognition_msgs::BoundingBox car_model){
-    ekf_pose.header.frame_id = "my_car";
+
+    tf::Transform transform;
+    transform.setOrigin(tf::Vector3(vehicle_utm.x, vehicle_utm.y, 0.0));
+    tf::Quaternion q;
+    q.setRPY(0, 0, vehicle_utm.yaw);
+    transform.setRotation(q);
+    tfcaster.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "map", "my_car"));
+
+    ekf_pose.header.frame_id = "map";
     ekf_pose.header.stamp = ros::Time::now();
     ekf_pose.pose.position.x = vehicle_utm.x;
     ekf_pose.pose.position.y = vehicle_utm.y;
     ekf_pose.pose.position.z = 0;
     ekf_pose.pose.orientation = tf::createQuaternionMsgFromYaw(vehicle_utm.yaw);
 
-    car_model.header.frame_id = "my_car";
+    car_model.header.frame_id = "map";
     car_model.header.stamp = ros::Time::now();
     car_model.dimensions.x = 3.0;
     car_model.dimensions.y = 1.5;
