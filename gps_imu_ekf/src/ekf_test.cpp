@@ -93,6 +93,9 @@ VectorXd ExtendedKalmanFilter::f_k(VectorXd x_post){
 }
 
 void ExtendedKalmanFilter::EKF(){
+    current_time = ros::Time::now();
+    dt = (current_time - previous_time).toSec();
+    
     if(state_init_check){
         Q << 0.1, 0.0, 0.0,          //값 높이면 측정값 비중 증가
              0.0, 0.1, 0.0,
@@ -143,6 +146,7 @@ void ExtendedKalmanFilter::EKF(){
         vehicle_utm.y = x_post(1);
         vehicle_utm.yaw = x_post(2);
     }
+    previous_time = current_time;
 }
 
 void ExtendedKalmanFilter::publishPose(){

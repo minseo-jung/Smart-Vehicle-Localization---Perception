@@ -87,6 +87,8 @@ class ExtendedKalmanFilter{
 
         geometry_msgs::PoseStamped gps_pose, ekf_pose;
 
+        ros::Time previous_time, current_time;
+
         utm gps_utm;
         utm vehicle_utm;
 
