@@ -63,6 +63,8 @@ class ntripconnect(Thread):
         connection.set_debuglevel(1)
         connection.request("GET", "/"+self.ntc.ntrip_stream, self.ntc.nmea_gga, headers)
         response = connection.getresponse()
+        print(response.status)
+
         if response.status != 200: raise Exception("blah")
         buf = ""
         rmsg = Message()
