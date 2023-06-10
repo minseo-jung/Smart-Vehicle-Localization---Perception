@@ -26,6 +26,7 @@ void ExtendedKalmanFilter::init(){
     vehicle_utm.velocity = 0.5;
 
     prev_yaw = 0;
+    yaw_bias = 0;
 
     dt = 1.0 / 80;
 
@@ -77,7 +78,13 @@ void ExtendedKalmanFilter::gpsCallback(const sensor_msgs::NavSatFix::ConstPtr& m
 }
 
 void ExtendedKalmanFilter::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
-    yaw_rate = msg -> angular_velocity.z;
+    if(vehicle_utm.velocity ==0){
+        yaw_bias+=msg->angular_velocity.z;
+    }
+    else{
+        yaw_bias = 0;
+    }
+    yaw_rate = msg -> angular_velocity.z - yaw_bias;
 }
 
 void ExtendedKalmanFilter::speedCallback(const std_msgs::Float32::ConstPtr& msg){
@@ -153,6 +160,14 @@ void ExtendedKalmanFilter::publishPose(){
     lanelet::BasicPoint3d utm_point(vehicle_utm.x, vehicle_utm.y, 0);
     lanelet::GPSPoint gps_point = projection.reverse(utm_point);
 
+    if (vehicle_utm.yaw > M_PI){
+        vehicle_utm.yaw -= 2.0 * M_PI;
+    }
+    else if (vehicle_utm.yaw < -M_PI){
+        vehicle_utm.yaw += 2.0 * M_PI;
+    }
+
+    k_pose.header.frame_id = "world";
 
     k_pose.latitude = gps_point.lat;
     k_pose.longitude = gps_point.lon;

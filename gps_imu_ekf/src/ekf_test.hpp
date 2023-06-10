@@ -73,7 +73,7 @@ class ExtendedKalmanFilter{
 
         bool gps_input, state_init_check, measure_check;
 
-        double yaw_rate, yaw, prev_yaw, dt;
+        double yaw_rate, yaw, prev_yaw, dt, yaw_bias;
 
         int prediction_count, gps_count, ekf_count;
 
