@@ -75,7 +75,7 @@ class ExtendedKalmanFilter{
 
         double yaw_rate, yaw, prev_yaw, dt, yaw_bias;
 
-        int prediction_count, gps_count, ekf_count;
+        int prediction_count, gps_count, ekf_count, yaw_bias_count;
 
         tf::TransformBroadcaster tfcaster;
 

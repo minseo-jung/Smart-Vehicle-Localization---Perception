@@ -23,10 +23,10 @@ void ExtendedKalmanFilter::init(){
 
     vehicle_utm.x = 0;
     vehicle_utm.y = 0;
-    vehicle_utm.velocity = 0.5;
 
     prev_yaw = 0;
     yaw_bias = 0;
+    yaw_bias_count = 1;
 
     dt = 1.0 / 80;
 
@@ -78,11 +78,13 @@ void ExtendedKalmanFilter::gpsCallback(const sensor_msgs::NavSatFix::ConstPtr& m
 }
 
 void ExtendedKalmanFilter::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
-    if(vehicle_utm.velocity ==0){
-        yaw_bias+=msg->angular_velocity.z;
+    if(vehicle_utm.velocity ==0 && yaw_bias_count < INT_MAX){
+        yaw_bias+=(msg->angular_velocity.z)/yaw_bias_count;
+        yaw_bias_count++;
     }
-    else{
+    else if(vehicle_utm.velocity <0){
         yaw_bias = 0;
+        yaw_bias_count = 1;
     }
     yaw_rate = msg -> angular_velocity.z - yaw_bias;
 }
@@ -102,14 +104,25 @@ VectorXd ExtendedKalmanFilter::f_k(VectorXd x_post){
 void ExtendedKalmanFilter::EKF(){
     current_time = ros::Time::now();
     dt = (current_time - previous_time).toSec();
-    
-    if(state_init_check){
+
+    if(vehicle_utm.velocity == 0){
+        Q << 0.01, 0.01, 0.01,      //값 높이면 측정값 비중 증가
+             0.01, 0.01, 0.01,
+             0.01, 0.01, 0.01;
+
+        R << 3.0, 0.0,               //값 높이면 센서값 비중 증가
+             0.0, 3.0;
+    }
+    else{
         Q << 0.1, 0.0, 0.0,          //값 높이면 측정값 비중 증가
              0.0, 0.1, 0.0,
              0.0, 0.0, 0.1;
 
         R << 1.5, 0.0,               //값 높이면 센서값 비중 증가
              0.0, 1.5;
+    }
+    
+    if(state_init_check){
 
         I.setIdentity();
 
