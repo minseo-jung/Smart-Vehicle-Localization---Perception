@@ -11,6 +11,7 @@ ExtendedKalmanFilter::ExtendedKalmanFilter(){
     box_pub = nh.advertise<jsk_recognition_msgs::BoundingBox>("car_model",1);
 
     m_pose_pub = nh.advertise<autoku_msgs::Gnss>("kalman_pose",100);
+    yaw_bias_pub = nh.advertise<std_msgs::Float64>("/yaw_bias",1);
 
     gps_input = false, state_init_check = false;
 }
@@ -87,6 +88,8 @@ void ExtendedKalmanFilter::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
         yaw_bias_count = 1;
     }
     yaw_rate = msg -> angular_velocity.z - yaw_bias;
+    yaw_bias_data.data = yaw_rate;
+    yaw_bias_pub.publish(yaw_bias_data);
 }
 
 void ExtendedKalmanFilter::speedCallback(const std_msgs::Float32::ConstPtr& msg){
