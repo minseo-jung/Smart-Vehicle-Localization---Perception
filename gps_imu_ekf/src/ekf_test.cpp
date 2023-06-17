@@ -1,7 +1,8 @@
 #include "ekf_test.hpp"
 
 ExtendedKalmanFilter::ExtendedKalmanFilter(){
-    m_gps_sub = nh.subscribe<sensor_msgs::NavSatFix>("/ublox_gps/fix", 100, &ExtendedKalmanFilter::gpsCallback, this);
+    // m_gps_sub = nh.subscribe<sensor_msgs::NavSatFix>("/ublox_gps/fix", 100, &ExtendedKalmanFilter::gpsCallback, this);
+    m_gps_sub = nh.subscribe<ublox_msgs::NavPVT>("/ublox_gps/navpvt", 100, &ExtendedKalmanFilter::gnssCallback, this);
     m_imu_sub = nh.subscribe<sensor_msgs::Imu>("/imu/data",1,&ExtendedKalmanFilter::imuCallback,this);
     m_vehicle_speed_sub = nh.subscribe<std_msgs::Float32>("/echo_hello",1,&ExtendedKalmanFilter::speedCallback, this);
     
@@ -24,6 +25,8 @@ void ExtendedKalmanFilter::init(){
 
     vehicle_utm.x = 0;
     vehicle_utm.y = 0;
+    vehicle_utm.velocity = 0.5;
+    // vehicle_utm.velocity = 0.5;
 
     prev_yaw = 0;
     yaw_bias = 0;
@@ -49,34 +52,35 @@ void ExtendedKalmanFilter::state_init(){
     }
 }
 
-// double ExtendedKalmanFilter::getVehicleSpeed(utm utm){
-//     return std::sqrt(std::pow(utm.x - utm.prev_x,2)+std::pow(utm.y - utm.prev_y,2))/gps_dt;
-// }
-
-void ExtendedKalmanFilter::gpsCallback(const sensor_msgs::NavSatFix::ConstPtr& msg)
-{
-    measure_check = true;
-
-    current_pos.lat = msg -> latitude;
-    current_pos.lon = msg -> longitude;
-    if(!gps_input){
-        gps_utm.prev_x = projection.forward(current_pos).x();
-        gps_utm.prev_y = projection.forward(current_pos).y();
-        gps_input = true;
-    }
-    else{
-        gps_utm.prev_x = gps_utm.x;
-        gps_utm.prev_y = gps_utm.y;
-    }
-
-    gps_utm.x = projection.forward(current_pos).x();
-    gps_utm.y = projection.forward(current_pos).y();
-
-    if(!state_init_check){
-        k_pose.latitude = msg->latitude;
-        k_pose.longitude = msg->longitude;
-    }
+double ExtendedKalmanFilter::getVehicleSpeed(utm utm){
+    return std::sqrt(std::pow(utm.x - utm.prev_x,2)+std::pow(utm.y - utm.prev_y,2));
 }
+
+// void ExtendedKalmanFilter::gpsCallback(const sensor_msgs::NavSatFix::ConstPtr& msg)
+// {
+//     measure_check = true;
+
+//     current_pos.lat = msg -> latitude;
+//     current_pos.lon = msg -> longitude;
+//     if(!gps_input){
+//         gps_utm.prev_x = projection.forward(current_pos).x();
+//         gps_utm.prev_y = projection.forward(current_pos).y();
+//         gps_input = true;
+//     }
+//     else{
+//         gps_utm.prev_x = gps_utm.x;
+//         gps_utm.prev_y = gps_utm.y;
+//     }
+
+//     gps_utm.x = projection.forward(current_pos).x();
+//     gps_utm.y = projection.forward(current_pos).y();
+
+//     if(!state_init_check){
+//         k_pose.latitude = msg->latitude;
+//         k_pose.longitude = msg->longitude;
+//     }
+//     //vehicle_utm.velocity = getVehicleSpeed(gps_utm);
+// }
 
 void ExtendedKalmanFilter::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
     if(vehicle_utm.velocity ==0 && yaw_bias_count < INT_MAX){
@@ -92,6 +96,40 @@ void ExtendedKalmanFilter::imuCallback(const sensor_msgs::Imu::ConstPtr& msg){
     yaw_bias_pub.publish(yaw_bias_data);
 }
 
+//test
+void ExtendedKalmanFilter::gnssCallback(const ublox_msgs::NavPVT::ConstPtr& msg){
+
+    measure_check = true;
+    
+    double dMsgGnssLatitude = (double)(msg->lat) * 1e-7;
+    double dMsgGnssLongitude = (double)(msg->lon) * 1e-7;
+    double dMsgGnssHeading = (double)(msg->heading)*1e-5;
+    double dHeading_rad = (-dMsgGnssHeading +90)* M_PI / 180;
+
+    current_pos.lat = dMsgGnssLatitude;
+    current_pos.lon = dMsgGnssLongitude;
+
+    if(!gps_input){
+        gps_utm.prev_x = projection.forward(current_pos).x();
+        gps_utm.prev_y = projection.forward(current_pos).y();
+        gps_input = true;
+    }
+    else{
+        gps_utm.prev_x = gps_utm.x;
+        gps_utm.prev_y = gps_utm.y;
+    }
+
+    gps_utm.x = projection.forward(current_pos).x();
+    gps_utm.y = projection.forward(current_pos).y();
+    measure_heading = dHeading_rad;
+
+    if(!state_init_check){
+        k_pose.latitude = dMsgGnssLatitude;
+        k_pose.longitude = dMsgGnssLongitude;
+    }
+
+}
+
 void ExtendedKalmanFilter::speedCallback(const std_msgs::Float32::ConstPtr& msg){
     vehicle_utm.velocity = msg->data;
 }
@@ -105,6 +143,7 @@ VectorXd ExtendedKalmanFilter::f_k(VectorXd x_post){
 }
 
 void ExtendedKalmanFilter::EKF(){
+    ROS_WARN("%f",vehicle_utm.velocity);
     current_time = ros::Time::now();
     dt = (current_time - previous_time).toSec();
 
@@ -113,16 +152,18 @@ void ExtendedKalmanFilter::EKF(){
              0.01, 0.01, 0.01,
              0.01, 0.01, 0.01;
 
-        R << 3.0, 0.0,               //값 높이면 센서값 비중 증가
-             0.0, 3.0;
+        R << 3.0, 0.0, 0.0,               //값 높이면 센서값 비중 증가
+             0.0, 3.0, 0.0,
+             0.0, 0.0, 3.0;
     }
     else{
         Q << 0.1, 0.0, 0.0,          //값 높이면 측정값 비중 증가
              0.0, 0.1, 0.0,
              0.0, 0.0, 0.1;
 
-        R << 1.5, 0.0,               //값 높이면 센서값 비중 증가
-             0.0, 1.5;
+        R << 1.5, 0.0, 0.0,               //값 높이면 센서값 비중 증가
+             0.0, 1.5, 0.0,
+             0.0, 0.0, 1.5;
     }
     
     if(state_init_check){
@@ -130,10 +171,12 @@ void ExtendedKalmanFilter::EKF(){
         I.setIdentity();
 
         H_jacob << 1.0, 0.0, 0.0,
-             0.0, 1.0, 0.0;
+                   0.0, 1.0, 0.0,
+                   0.0, 0.0, 1.0;
 
         z << gps_utm.x,
-            gps_utm.y;
+            gps_utm.y,
+            measure_heading;
 
         F_jacob << 1.0, 0.0, -1*vehicle_utm.velocity*dt*sin(vehicle_utm.yaw), 
              0.0, 1.0, vehicle_utm.velocity*dt*cos(vehicle_utm.yaw),
@@ -150,9 +193,10 @@ void ExtendedKalmanFilter::EKF(){
 
         prediction_count++;
 
-        if(measure_check){
+        if(measure_check && vehicle_utm.velocity > 0.05){
             h << x_prior(0),
-                x_prior(1);
+                x_prior(1),
+                x_prior(2);
 
             K = P_prior * H_jacob.transpose()*(H_jacob*P_prior*H_jacob.transpose()+R).inverse();
             

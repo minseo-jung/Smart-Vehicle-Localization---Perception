@@ -17,10 +17,11 @@
 #include <std_msgs/Float32.h>
 #include <std_msgs/Float64.h>
 #include "autoku_msgs/Gnss.h"
+#include "ublox_msgs/NavPVT.h"
 
 using namespace Eigen;
 
-const int N = 3, M = 2; //N =  state (x, y, yaw), M = Measure (x, y)
+const int N = 3, M = 3; //N =  state (x, y, yaw), M = Measure (x, y)
 
 MatrixXd Q(N,N), I(N,N), F_jacob(N,N), P_post(N,N), P_prior(N,N), K(N,M), R(M,M), H_jacob(M,N);
 VectorXd f(N), x_post(N), x_prior(N), z(M), h(M), f_dr(N); 
@@ -55,11 +56,13 @@ class ExtendedKalmanFilter{
 
         void state_init();
 
-        void gpsCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
+        //void gpsCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
 
         void imuCallback(const sensor_msgs::Imu::ConstPtr& msg);
 
         void speedCallback(const std_msgs::Float32::ConstPtr& msg);
+
+        void gnssCallback(const ublox_msgs::NavPVT::ConstPtr& msg);
 
         void EKF();
 
@@ -75,7 +78,7 @@ class ExtendedKalmanFilter{
 
         bool gps_input, state_init_check, measure_check;
 
-        double yaw_rate, yaw, prev_yaw, dt, yaw_bias;
+        double yaw_rate, yaw, prev_yaw, dt, yaw_bias, measure_heading;
 
         int prediction_count, gps_count, ekf_count, yaw_bias_count;
 
